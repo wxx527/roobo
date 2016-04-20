@@ -1,0 +1,357 @@
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.util.List;
+
+import org.apache.bcel.generic.StackConsumer;
+import org.w3c.dom.NamedNodeMap;
+
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.DomNode;
+import com.gargoylesoftware.htmlunit.html.DomNodeList;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
+public class Spider {
+
+	public static void main(String[] args) throws Exception {
+		ducks();
+		//ertong61();
+	}
+	
+	
+	/**
+	 * 小鸭子儿童乐园 url2
+	 */
+	public static void ducks()throws Exception{
+		String URL = "http://www.littleducks.cn";
+		String url = "http://www.littleducks.cn/story/"; 
+        WebClient webClient = new WebClient();
+        webClient.getOptions().setJavaScriptEnabled(false);
+        webClient.getOptions().setCssEnabled(false);
+        HtmlPage page = webClient.getPage(url);
+        DomNode nav = page.querySelector(".channel-nav ul");
+        DomNodeList<DomNode> navL = nav.getChildNodes();
+        String url_="http://www.littleducks.cn";
+        for (int i=0;i<navL.size()-2;i++) {
+			DomNode aNode = navL.get(i).getFirstChild();
+			if(aNode!=null){
+				String cateName = aNode.getTextContent(); //分类名称
+				String cateUrl = aNode.getAttributes().item(0).getNodeValue();
+				String url_2 = url_+cateUrl;
+				page = webClient.getPage(url_2);
+				DomNodeList<DomNode> storyL = page.querySelectorAll(".e2 li .title");
+				
+				//第一页列表
+				for (DomNode sd : storyL) { //每个分类
+					String storyName = sd.getTextContent(); //故事名称
+					String storyUrl = sd.getAttributes().getNamedItem("href").getTextContent();
+					storyUrl = URL+storyUrl;//故事URL
+					HtmlPage page2 =  webClient.getPage(storyUrl);//源码页
+					DomNode timeNod =  page2.querySelector(".info"); 
+					String pubTime = timeNod.asText();
+					pubTime = pubTime.substring(3,19);//发布时间
+					
+					DomNode contNod = page2.querySelector(".content");
+					contNod.querySelector("div").remove();
+					contNod.querySelector("h2").remove();
+					contNod.querySelector("a").remove();
+					String storyCont = contNod.asText(); //故事内容
+					//是否分页
+					List<DomNode> pL = page2.querySelectorAll(".pagelist li");
+					int p = pL.size()-3; //故事总页码
+					if(p>0){//遍历每一页
+						String url_3 = storyUrl.substring(0, storyUrl.lastIndexOf("."));
+						for(int k=2;k<=p;k++){
+							String url_k = url_3+"_"+k+".html";
+							HtmlPage page_k =  webClient.getPage(url_k);
+							DomNode contN = page_k.querySelector(".content");
+							contN.querySelector("div").remove();
+							contN.querySelector("h2").remove();
+							contN.querySelector("a").remove();
+							storyCont += contN.asText(); //故事内容 追加
+						}
+					}
+					System.err.println(storyCont);
+					System.err.println("****************************");
+					
+				}
+				
+				//第二页开始列表
+				DomNodeList<DomNode> pL = page.querySelectorAll(".pagelist a");
+				String pp = pL.get(pL.getLength()-1).getAttributes().item(0).getNodeValue();
+				String p1 = "";
+				String p2 = "";
+				boolean flag = false;
+				if(pp.indexOf("list")!=-1){
+					p1 = pp.substring(0, pp.lastIndexOf("_"));//分类页码 前缀如 list_311_49.html 中的list_311
+					p2 = pp.substring(pp.lastIndexOf("_")+1,pp.indexOf("."));
+					flag = false;
+				}else{
+					p1 = pp.substring(0, pp.indexOf("-"));//分类页码 前缀如 8-136.html 中的8
+					p2 = pp.substring(pp.indexOf("-")+1,pp.indexOf("."));
+					flag = true;
+				}
+				int p = Integer.parseInt(p2); //总页码
+				String url_3;
+				if(flag){//8-136.html
+					for(int j=2;j<=p;j++){//每一页列表
+						url_3 = url_2+p1+"-"+j+".html";
+						HtmlPage page_j =  webClient.getPage(url_3);
+						DomNodeList<DomNode> stL = page.querySelectorAll(".e2 li .title");
+						for (DomNode sd : stL) { //每个分类
+							String storyName = sd.getTextContent(); //故事名称
+							String storyUrl = sd.getAttributes().getNamedItem("href").getTextContent();
+							storyUrl = URL+storyUrl;//故事URL
+							HtmlPage page2 =  webClient.getPage(storyUrl);//源码页
+							DomNode timeNod =  page2.querySelector(".info"); 
+							String pubTime = timeNod.asText();
+							pubTime = pubTime.substring(3,19);//发布时间
+							System.err.println("0*****"+storyUrl);
+							DomNode contNod = page2.querySelector(".content");
+							contNod.querySelector("div").remove();
+							contNod.querySelector("h2").remove();
+							contNod.querySelector("a").remove();
+							String storyCont = contNod.asText(); //故事内容
+							//是否分页
+							List<DomNode> ppL = page2.querySelectorAll(".pagelist li");
+							int p3 = ppL.size()-3; //故事总页码
+							if(p3>0){//遍历每一页
+								String url_4 = storyUrl.substring(0, storyUrl.lastIndexOf("."));
+								for(int k=2;k<=p3;k++){
+									String url_k = url_4+"_"+k+".html";
+									System.err.println("1*****"+url_k);
+									HtmlPage page_k =  webClient.getPage(url_k);
+									DomNode contN = page_k.querySelector(".content");
+									contN.querySelector("div").remove();
+									contN.querySelector("h2").remove();
+									contN.querySelector("a").remove();
+									storyCont += contN.asText(); //故事内容 追加
+								}
+							}
+							System.err.println(storyCont);
+							System.err.println("****************************");
+							
+						}
+					}
+				}else{//list_311_49.html
+					for(int j=2;j<=p;j++){//每一页列表
+						url_3 = url_2+p1+"_"+j+".html";
+						HtmlPage page_j =  webClient.getPage(url_3);
+						DomNodeList<DomNode> stL = page.querySelectorAll(".e2 li .title");
+						for (DomNode sd : stL) { //每个分类
+							String storyName = sd.getTextContent(); //故事名称
+							String storyUrl = sd.getAttributes().getNamedItem("href").getTextContent();
+							storyUrl = URL+storyUrl;//故事URL
+							HtmlPage page2 =  webClient.getPage(storyUrl);//源码页
+							DomNode timeNod =  page2.querySelector(".info"); 
+							String pubTime = timeNod.asText();
+							pubTime = pubTime.substring(3,19);//发布时间
+							System.err.println("2*****"+storyUrl);
+							DomNode contNod = page2.querySelector(".content");
+							contNod.querySelector("div").remove();
+							contNod.querySelector("h2").remove();
+							contNod.querySelector("a").remove();
+							String storyCont = contNod.asText(); //故事内容
+							//是否分页
+							List<DomNode> ppL = page2.querySelectorAll(".pagelist li");
+							int p3 = ppL.size()-3; //故事总页码
+							if(p3>0){//遍历每一页
+								String url_4 = storyUrl.substring(0, storyUrl.lastIndexOf("."));
+								for(int k=2;k<=p3;k++){
+									String url_k = url_4+"_"+k+".html";
+									HtmlPage page_k =  webClient.getPage(url_k);
+									System.err.println("3*****"+page_k);
+									DomNode contN = page_k.querySelector(".content");
+									contN.querySelector("div").remove();
+									contN.querySelector("h2").remove();
+									contN.querySelector("a").remove();
+									storyCont += contN.asText(); //故事内容 追加
+								}
+							}
+							System.err.println(storyCont);
+							System.err.println("****************************");
+							
+						}
+					}
+				}
+				//System.err.println(p2);
+			}
+		}
+	}
+	
+	
+	/**
+	 * 六一儿童网
+	 */
+	public static void ertong61()throws Exception{
+		Class.forName("com.mysql.jdbc.Driver");
+		String URL="jdbc:mysql://localhost:3306/sp?user=root&password=root&useUnicode=true&characterEncoding=gbk";
+		Connection con = DriverManager.getConnection(URL);
+		String sql ="insert into ertong(category,title,content,pubtime,url,html_code) values(?,?,?,?,?,?)";
+		PreparedStatement stmt = con.prepareStatement(sql);
+		
+		String url = "http://www.61ertong.com/wenxue/tonghuagushi/list_177_1.html"; //童话故事首页
+        WebClient webClient = new WebClient();
+        webClient.getOptions().setJavaScriptEnabled(false);
+        webClient.getOptions().setCssEnabled(false);
+        HtmlPage page = webClient.getPage(url);
+        HtmlPage page2 = webClient.getPage(url); //取分类用
+        
+        //第一大类所有数据 - 童话故事分类
+        //获取总页数
+        List<DomNode> pageL = page.querySelectorAll(".pagelist .next");
+        String pageNo = pageL.get(3).asText(); //共**页
+        pageNo = pageNo.substring(1,pageNo.indexOf("页"));
+        int pageNO = Integer.parseInt(pageNo); //该分类总页数
+        
+        url = url.substring(0, url.lastIndexOf("_"));
+        for(int i=1;i<=pageNO;i++){//遍历每一页
+        	String url_i = url+"_"+i+".html"; //每一页url地址
+        	page = webClient.getPage(url_i);
+        	List<DomNode> storyL = page.querySelectorAll(".list h3 a"); //每页的故事列表
+            for (int j=0;j<storyL.size();j++) {//遍历列表中每一个
+            	NamedNodeMap nnm =storyL.get(j).getAttributes(); 
+            	String storyName = nnm.item(2).getNodeValue();//故事标题
+            	
+            	String url_j = nnm.item(0).getNodeValue();
+            	page = webClient.getPage(url_j);
+            	DomNode contNode = page.querySelector("div .content");
+            	DomNode bdShare = contNode.querySelector(".bdsharebuttonbox");
+            	if(bdShare!=null){
+            		bdShare.remove();//移除百度分享
+            	}
+            	DomNode jsNode = page.querySelector("div .content script");
+            	if(jsNode!=null){
+            		jsNode.remove();//移除百度分享js
+            	}
+            	DomNode time = page.querySelector("div .tt");
+            	String pubTime = time.asText();
+            	pubTime = pubTime.substring(pubTime.indexOf("时间：")+3,pubTime.lastIndexOf(":")+3);
+            	String storyCont = ""; //故事内容
+				
+            	//有没有下一页
+            	DomNode ym = page.querySelector("div .content .dede_pages ul");
+            	if(ym!=null){
+            		int p = ym.getChildNodes().getLength()-5; //此故事是否有分页
+            		ym.getParentNode().remove();
+            		storyCont = contNode.asText();
+            		if(p>0){ //有分页
+            			url_j = url_j.substring(0, url_j.lastIndexOf("."));
+            			for(int k=2;k<=p;k++){//遍历每一页
+            				String url_k = url_j +"_"+k+".html";
+            				page = webClient.getPage(url_k);
+            				DomNode c_k = page.querySelector("div .content");
+            				DomNode bd = c_k.querySelector(".bdsharebuttonbox");
+                        	if(bd!=null){
+                        		bd.remove();//移除百度分享
+                        	}
+                        	DomNode js = page.querySelector("div .content script");
+                        	if(js!=null){
+                        		js.remove();//移除百度分享js
+                        	}
+                        	DomNode ymm = page.querySelector("div .content .dede_pages ul");
+                        	if(ymm!=null){
+                        		ymm.getParentNode().remove();//移除分页
+                        	}
+            				storyCont += c_k.asText(); //故事内容追加
+            			}
+            		}
+            	}
+            	
+            	//入库
+            	stmt.setString(1, "童话故事");
+            	stmt.setString(2, storyName);
+            	stmt.setString(3, storyCont);
+            	stmt.setString(4, pubTime);
+            	stmt.setString(5, url_j);
+            	stmt.setString(6, page.asXml());
+            	stmt.executeUpdate();
+    		}
+        }
+        
+        //取分类 从第二个开始
+        DomNodeList<DomNode> categoryL = page2.querySelectorAll(".menubar");
+        for(int i=0;i<categoryL.size();i++){ //遍历分类
+        	DomNode node = categoryL.get(i);
+        	String categoryName = node.getTextContent();//分类名称
+        	String url_i = node.getFirstChild().getAttributes().item(0).getNodeValue(); //分类的url地址
+        	
+        	 //获取总页数
+        	page2 = webClient.getPage(url_i); 
+            List<DomNode> pList = page2.querySelectorAll(".pagelist .next");
+            String pNo = pList.get(3).asText();
+            System.err.println(pList.get(3).asText());	
+            pNo = pNo.substring(1,pNo.indexOf("页"));
+            int pNO = Integer.parseInt(pNo);//总页数
+            url_i = url_i.substring(0, url_i.lastIndexOf("_"));
+            
+            for(int j=1;j<=pNO;j++){ //遍历每一页
+            	String url_j = url_i+"_"+j+".html";
+            	page2 = webClient.getPage(url_j);
+            	List<DomNode> storyL = page2.querySelectorAll(".list h3 a");
+                for (int k=0;k<storyL.size();k++) { //单页中故事列表
+                	NamedNodeMap nnm =storyL.get(k).getAttributes();
+                	String storyName = nnm.item(2).getNodeValue();//故事名称
+                	String url_k = nnm.item(0).getNodeValue();
+                	page2 = webClient.getPage(url_k);
+                	DomNode contNode = page2.querySelector("div .content");//故事内容
+                	DomNode bdShare = contNode.querySelector(".bdsharebuttonbox");
+                	if(bdShare!=null){
+                		bdShare.remove(); //移除百度分享
+                	}
+                	DomNode jsNode = page2.querySelector("div .content script");
+                	if(jsNode!=null){
+                		jsNode.remove();//移除百度分享js
+                	}
+                	DomNode time = page2.querySelector("div .tt");
+                	String pubTime = time.asText();
+                	pubTime = pubTime.substring(pubTime.indexOf("时间：")+3,pubTime.lastIndexOf(":")+3);
+                	String storyCont = "";
+                	
+                	//有没有下一页
+                	DomNode ym = page2.querySelector("div .content .dede_pages ul");
+                	int p = 0;
+                	if(ym!=null &&ym.getChildNodes()!=null){
+                		p = ym.getChildNodes().getLength()-5; //此故事是否有分页
+                		ym.getParentNode().remove();
+                	}
+                	storyCont = contNode.asText();
+                	if(p>0){ //有分页
+                		url_k = url_k.substring(0, url_k.lastIndexOf("."));
+                		for(int m=2;m<=p;m++){//遍历每一页
+                			String url_m = url_k +"_"+m+".html";
+                			page2 = webClient.getPage(url_m);
+                			DomNode contNode_ = page2.querySelector("div .content");
+                			DomNode bd = contNode_.querySelector(".bdsharebuttonbox");
+                			if(bd!=null){
+                        		bd.remove();//移除百度分享
+                        	}
+                        	DomNode js = page2.querySelector("div .content script");
+                        	if(js!=null){
+                        		js.remove();//移除百度分享js
+                        	}
+                        	DomNode ymm = page2.querySelector("div .content .dede_pages ul");
+                        	if(ymm!=null){
+                        		ymm.getParentNode().remove();//移除分页
+                        	}
+                			storyCont += contNode_.asText(); //故事内容追加
+                		}
+                	}
+                	
+                	//入库
+                	stmt.setString(1, categoryName);
+                	stmt.setString(2, storyName);
+                	stmt.setString(3, storyCont);
+                	stmt.setString(4, pubTime);
+                	stmt.setString(5, url_k);
+                	stmt.setString(6, page2.asXml());
+                	stmt.executeUpdate();
+        		}
+            }
+        }
+        
+        webClient.close();
+	}
+	
+
+}
