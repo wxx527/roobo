@@ -23,6 +23,13 @@ public class Spider {
 	 * 小鸭子儿童乐园 url2
 	 */
 	public static void ducks()throws Exception{
+		
+		Class.forName("com.mysql.jdbc.Driver");
+		String URL1="jdbc:mysql://localhost:3306/sp?user=root&password=root&useUnicode=true&characterEncoding=gbk";
+		Connection con = DriverManager.getConnection(URL1);
+		String sql ="insert into ducks2(category,title,content,pubtime,url,html_code) values(?,?,?,?,?,?)";
+		PreparedStatement stmt = con.prepareStatement(sql);
+		
 		String URL = "http://www.littleducks.cn";
 		String url = "http://www.littleducks.cn/story/"; 
         WebClient webClient = new WebClient();
@@ -50,12 +57,29 @@ public class Spider {
 					DomNode timeNod =  page2.querySelector(".info"); 
 					String pubTime = timeNod.asText();
 					pubTime = pubTime.substring(3,19);//发布时间
-					
 					DomNode contNod = page2.querySelector(".content");
-					contNod.querySelector("div").remove();
-					contNod.querySelector("h2").remove();
-					contNod.querySelector("a").remove();
-					String storyCont = contNod.asText(); //故事内容
+					DomNode contDiv = contNod.querySelector("#sina_keyword_ad_area2");
+					String storyCont;
+					if(contDiv!=null){
+						DomNode dd = contDiv.querySelector("div");
+						if(dd!=null){
+							dd.remove();
+						}
+						DomNode hh = contDiv.querySelector("h2");
+						if(hh!=null){
+							hh.remove();
+						}
+						DomNode aa = contDiv.querySelector("a");
+						if(aa!=null){
+							aa.remove();
+						}
+						storyCont = contDiv.asText(); //故事内容
+					}else{
+						contNod.querySelector("div").remove();
+						contNod.querySelector("h2").remove();
+						contNod.querySelector("a").remove();
+						storyCont = contNod.asText(); //故事内容
+					}
 					//是否分页
 					List<DomNode> pL = page2.querySelectorAll(".pagelist li");
 					int p = pL.size()-3; //故事总页码
@@ -65,16 +89,34 @@ public class Spider {
 							String url_k = url_3+"_"+k+".html";
 							HtmlPage page_k =  webClient.getPage(url_k);
 							DomNode contN = page_k.querySelector(".content");
-							contN.querySelector("div").remove();
-							contN.querySelector("h2").remove();
-							contN.querySelector("a").remove();
+							DomNode dd = contN.querySelector("div");
+							if(dd!=null){
+								dd.remove();
+							}
+							DomNode hh = contN.querySelector("h2");
+							if(hh!=null){
+								hh.remove();
+							}
+							DomNode aa = contN.querySelector("a");
+							if(aa!=null){
+								aa.remove();
+							}
 							storyCont += contN.asText(); //故事内容 追加
 						}
 					}
-					System.err.println(storyCont);
+					
+					//入库
+	            	stmt.setString(1, cateName);
+	            	stmt.setString(2, storyName);
+	            	stmt.setString(3, storyCont);
+	            	stmt.setString(4, pubTime);
+	            	stmt.setString(5, storyUrl);
+	            	stmt.setString(6, page2.asXml());
+	            	stmt.executeUpdate();
 					System.err.println("****************************");
 					
 				}
+				
 				
 				//第二页开始列表
 				DomNodeList<DomNode> pL = page.querySelectorAll(".pagelist a");
@@ -106,12 +148,29 @@ public class Spider {
 							DomNode timeNod =  page2.querySelector(".info"); 
 							String pubTime = timeNod.asText();
 							pubTime = pubTime.substring(3,19);//发布时间
-							System.err.println("0*****"+storyUrl);
 							DomNode contNod = page2.querySelector(".content");
-							contNod.querySelector("div").remove();
-							contNod.querySelector("h2").remove();
-							contNod.querySelector("a").remove();
-							String storyCont = contNod.asText(); //故事内容
+							DomNode contDiv = contNod.querySelector("#sina_keyword_ad_area2");
+							String storyCont; //故事内容
+							if(contDiv!=null){
+								DomNode dd = contDiv.querySelector("div");
+								if(dd!=null){
+									dd.remove();
+								}
+								DomNode hh = contDiv.querySelector("h2");
+								if(hh!=null){
+									hh.remove();
+								}
+								DomNode aa = contDiv.querySelector("a");
+								if(aa!=null){
+									aa.remove();
+								}
+								storyCont = contDiv.asText(); //故事内容
+							}else{
+								contNod.querySelector("div").remove();
+								contNod.querySelector("h2").remove();
+								contNod.querySelector("a").remove();
+								storyCont = contNod.asText(); //故事内容
+							}
 							//是否分页
 							List<DomNode> ppL = page2.querySelectorAll(".pagelist li");
 							int p3 = ppL.size()-3; //故事总页码
@@ -119,18 +178,32 @@ public class Spider {
 								String url_4 = storyUrl.substring(0, storyUrl.lastIndexOf("."));
 								for(int k=2;k<=p3;k++){
 									String url_k = url_4+"_"+k+".html";
-									System.err.println("1*****"+url_k);
 									HtmlPage page_k =  webClient.getPage(url_k);
 									DomNode contN = page_k.querySelector(".content");
-									contN.querySelector("div").remove();
-									contN.querySelector("h2").remove();
-									contN.querySelector("a").remove();
+									DomNode dd = contN.querySelector("div");
+									if(dd!=null){
+										dd.remove();
+									}
+									DomNode hh = contN.querySelector("h2");
+									if(hh!=null){
+										hh.remove();
+									}
+									DomNode aa = contN.querySelector("a");
+									if(aa!=null){
+										aa.remove();
+									}
 									storyCont += contN.asText(); //故事内容 追加
 								}
 							}
-							System.err.println(storyCont);
+							//入库
+			            	stmt.setString(1, cateName);
+			            	stmt.setString(2, storyName);
+			            	stmt.setString(3, storyCont);
+			            	stmt.setString(4, pubTime);
+			            	stmt.setString(5, storyUrl);
+			            	stmt.setString(6, page2.asXml());
+			            	stmt.executeUpdate();
 							System.err.println("****************************");
-							
 						}
 					}
 				}else{//list_311_49.html
@@ -146,7 +219,6 @@ public class Spider {
 							DomNode timeNod =  page2.querySelector(".info"); 
 							String pubTime = timeNod.asText();
 							pubTime = pubTime.substring(3,19);//发布时间
-							System.err.println("2*****"+storyUrl);
 							DomNode contNod = page2.querySelector(".content");
 							contNod.querySelector("div").remove();
 							contNod.querySelector("h2").remove();
@@ -160,7 +232,6 @@ public class Spider {
 								for(int k=2;k<=p3;k++){
 									String url_k = url_4+"_"+k+".html";
 									HtmlPage page_k =  webClient.getPage(url_k);
-									System.err.println("3*****"+page_k);
 									DomNode contN = page_k.querySelector(".content");
 									contN.querySelector("div").remove();
 									contN.querySelector("h2").remove();
@@ -168,13 +239,18 @@ public class Spider {
 									storyCont += contN.asText(); //故事内容 追加
 								}
 							}
-							System.err.println(storyCont);
+							//入库
+			            	stmt.setString(1, cateName);
+			            	stmt.setString(2, storyName);
+			            	stmt.setString(3, storyCont);
+			            	stmt.setString(4, pubTime);
+			            	stmt.setString(5, storyUrl);
+			            	stmt.setString(6, page2.asXml());
+			            	stmt.executeUpdate();
 							System.err.println("****************************");
-							
 						}
 					}
 				}
-				//System.err.println(p2);
 			}
 		}
 	}
