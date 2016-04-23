@@ -1,0 +1,77 @@
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.util.List;
+
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.DomNode;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
+public class SmallBD {
+
+	public static void main(String[] args) {
+		
+		String URL = "http://www.pingushi.cn/story/%s/detail"; //详情页
+		//String URL1 = "http://www.pingushi.cn/index.php?app=story&mod=Index&act=index&p=%s";//每一页 小布丁
+		String URL1_ = "http://www.pingushi.cn/index.php?app=story&mod=Index&act=index&dcid=308&p=%s";//每一页 大耳朵图图
+		
+		String URL2 = "http://www.pingushi.cn/index.php?app=public&mod=Profile&act=shiting&music_id=%s";//试听页
+        WebClient webClient = new WebClient();
+        webClient.getOptions().setJavaScriptEnabled(false);
+        webClient.getOptions().setCssEnabled(false);
+        
+        try {
+        	Class.forName("com.mysql.jdbc.Driver");
+    		String URI="jdbc:mysql://localhost:3306/sp?user=root&password=root&useUnicode=true&characterEncoding=gbk";
+    		Connection con = DriverManager.getConnection(URI);
+    		String sql ="insert into xiaoBD2(title,category,age,listen_url,url,html_code) values(?,?,?,?,?,?)";
+    		PreparedStatement stmt = con.prepareStatement(sql); //xiaoBD2 大耳朵图图
+    		
+    		HtmlPage page_i = null;
+        	//for(int i=1;i<224;i++){//小布丁系列
+        	for(int i=1;i<6;i++){//大耳朵图图系列	
+        		String fenyeURL = String.format(URL1_, i); //URL1_ 大耳朵图图
+        		page_i = webClient.getPage(fenyeURL);
+        		List<DomNode> nums = page_i.querySelectorAll(".story-name");
+        		for(int j=0;j<nums.size();j++){
+        			String num = nums.get(j).asText();
+        			num = num.substring(num.indexOf("NO:")+3,num.length()-1);
+        			String url = String.format(URL,num);
+        			System.err.println(url); //url地址
+        			HtmlPage page = webClient.getPage(url); //源码页
+        			DomNode node = page.querySelector(".xgs_pro_w");
+        			if(node==null){
+        				continue;
+        			}
+        			DomNode titNod = node.querySelector("h3");
+        			String title = titNod.asText();//标题
+        			List<DomNode> tagL = node.querySelectorAll("span");
+        			String cate = tagL.get(0).asText(); //分类
+        			String nianlin = tagL.get(1).asText(); //分龄
+        			String url2 = String.format(URL2,num); //音频地址
+        			
+        			//入库
+        			stmt.setString(1, title);
+        			stmt.setString(2, cate);
+        			stmt.setString(3, nianlin);
+        			stmt.setString(4, url2);
+        			stmt.setString(5, url);
+        			stmt.setString(6, page.asXml());
+        			stmt.executeUpdate();
+        		}
+        	}
+			webClient.close();
+		} catch (FailingHttpStatusCodeException e) {
+			e.printStackTrace();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}
