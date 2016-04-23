@@ -1,0 +1,69 @@
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.DomNode;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
+public class Zhidao {
+
+	public static void main(String[] args) {
+		
+		String URL = "http://zhidao.baidu.com/question/";
+        WebClient webClient = new WebClient();
+        webClient.getOptions().setJavaScriptEnabled(false);
+        webClient.getOptions().setCssEnabled(false);
+        try {
+        	Class.forName("com.mysql.jdbc.Driver");
+    		String URL1="jdbc:mysql://localhost:3306/sp?user=root&password=root&useUnicode=true&characterEncoding=gbk";
+    		Connection con = DriverManager.getConnection(URL1);
+    		String sql ="insert into zhidao(ask_title,ask_content,best_answer,answers,url,html_code) values(?,?,?,?,?,?)";
+    		PreparedStatement stmt = con.prepareStatement(sql);
+    		
+    		HtmlPage page= null;
+        	for(int i=711;i<100000;i++){
+        		String url = URL + i+".html";
+        		System.err.println(url);
+        		page = webClient.getPage(url);
+        		DomNode good = page.querySelector(".best-text"); 
+        		if(good==null){ //没有采纳的回答 跳过
+        			continue;
+        		}
+        		String gdAns = good.asText();//采纳的回答
+        		DomNode nod = page.querySelector(".ask-title");
+        		String title = nod.asText(); //提问标题
+        		DomNode cont = page.querySelector(".q-content");
+        		String contxt ="";//提问内容
+        		if(cont!=null){
+        			contxt = cont.asText(); 
+        		}
+        		System.err.println(contxt);
+        		List<DomNode> asL = page.querySelectorAll(".answer-text");
+        		Map<Integer,String> parms = new HashMap<Integer,String>();
+        		for(int j=0;j<asL.size();j++){
+        			String anser = asL.get(j).asText();
+        			parms.put(j+1, anser);
+        		}
+        		String anString = parms.toString(); //回答数据
+
+        		//入库
+            	stmt.setString(1, title);
+            	stmt.setString(2, contxt);
+            	stmt.setString(3, gdAns);
+            	stmt.setString(4, anString);
+            	stmt.setString(5, url);
+            	stmt.setString(6, page.asXml());
+            	stmt.executeUpdate();
+        	}
+        	webClient.close();
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+}
