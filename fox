@@ -1,0 +1,72 @@
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.util.List;
+
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.DomNode;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
+public class Fox {
+
+	public static void main(String[] args) {
+		
+		String URL = "http://cn.littlefox.com/cn/songs/";
+        WebClient webClient = new WebClient();
+        webClient.getOptions().setJavaScriptEnabled(false);
+        webClient.getOptions().setCssEnabled(false);
+        
+        try {
+        	Class.forName("com.mysql.jdbc.Driver");
+    		String URI="jdbc:mysql://localhost:3306/sp?user=root&password=root&useUnicode=true&characterEncoding=gbk";
+    		Connection con = DriverManager.getConnection(URI);
+    		String sql ="insert into fox(title,is_free,down_url,url) values(?,?,?,?)";
+    		PreparedStatement stmt = con.prepareStatement(sql); //小狐狸
+    		
+			HtmlPage page = webClient.getPage(URL);
+			List<DomNode> cateL = page.querySelectorAll(".songs_subject a");
+			String URL2 = "http://cn.littlefox.com";
+			String URL3 = "http://cn.littlefox.com/cn/supplement/mp3/%s";
+			for (DomNode d : cateL) {
+				String url = d.getAttributes().item(0).getNodeValue();
+				url = URL2 + url;
+				System.err.println(url);
+				HtmlPage page2 = webClient.getPage(url);
+				List<DomNode> ergeL = page2.querySelectorAll(".subject");
+				for (DomNode dd : ergeL) {
+					String tt = dd.asText(); //儿歌标题
+					DomNode pNode = dd.getParentNode();
+					String isFree = pNode.getAttributes().getNamedItem("data-free").getNodeValue();
+					if("Y".equals(isFree)){
+						isFree = "付费";
+					}else{
+						isFree = "免费";
+					}
+					String loadAddr = pNode.getAttributes().getNamedItem("data-fcid").getNodeValue();
+					loadAddr = String.format(URL3, loadAddr);
+					
+					//入库
+        			stmt.setString(1, tt);
+        			stmt.setString(2, isFree);
+        			stmt.setString(3, loadAddr);
+        			stmt.setString(4, url);
+        			stmt.executeUpdate();
+				}
+			}
+			
+		} catch (FailingHttpStatusCodeException e) {
+			e.printStackTrace();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+        webClient.close();
+	}
+
+}
