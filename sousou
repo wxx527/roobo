@@ -1,0 +1,68 @@
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.DomNode;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
+public class Sousou {
+
+	public static void main(String[] args){
+		String URL = "http://wenwen.sogou.com/z/q"; //10万开始  1万万
+        WebClient webClient = new WebClient();
+        webClient.getOptions().setJavaScriptEnabled(false);
+        webClient.getOptions().setCssEnabled(false);
+        webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
+        webClient.getOptions().setPrintContentOnFailingStatusCode(false);
+        
+        try {
+        	Class.forName("com.mysql.jdbc.Driver");
+    		String URL1="jdbc:mysql://localhost:3306/sp?user=root&password=root&useUnicode=true&characterEncoding=gbk";
+    		Connection con = DriverManager.getConnection(URL1);
+    		String sql ="insert into sousou(ask_title,ask_content,answers,url,html_code) values(?,?,?,?,?)";
+    		PreparedStatement stmt = con.prepareStatement(sql);
+    		HtmlPage page = null;
+        	for(int i=2397;i<10000000;i++){
+        		String url = URL +i+ ".htm";
+        		System.err.println(url);
+        		page = webClient.getPage(url);
+        		DomNode tNode = page.querySelector(".question-tit");
+        		if(tNode==null){
+        			continue;
+        		}
+        		List<DomNode> tNodeL = page.querySelectorAll(".satisfaction-answer");
+        		if(tNodeL.isEmpty()){//没有满意答案 跳出
+        			continue;
+        		}
+        		String title = tNode.asText();//提问标题
+        		tNode = page.querySelector("#questionContent");
+        		String cont = "";
+        		if(tNode!=null){
+        			cont = tNode.asText(); //提问内容
+        		}
+        		String answers = "";
+        		Map<Integer,String> pars = new HashMap<Integer,String>();
+        		for(int j=0;j<tNodeL.size();j++){
+        			pars.put(j+1, tNodeL.get(j).asText());
+        		}
+        		answers = pars.toString(); //满意回答
+        		
+        		//入库
+            	stmt.setString(1, title);
+            	stmt.setString(2, cont);
+            	stmt.setString(3, answers);
+            	stmt.setString(4, url);
+            	stmt.setString(5, page.asXml());
+            	stmt.executeUpdate();
+        	}
+			webClient.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+}
