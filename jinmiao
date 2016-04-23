@@ -1,0 +1,60 @@
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.util.List;
+
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.DomNode;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
+public class JinMiao {
+
+	public static void main(String[] args) {
+		String URL = "http://www.jinmiao.cn/list8typeagepage%s.html"; //列表地址
+		String URL2 = "http://www.jinmiao.cn/play/index.php?t=fromid&id=%s"; //试听地址
+        WebClient webClient = new WebClient();
+        webClient.getOptions().setJavaScriptEnabled(false);
+        webClient.getOptions().setCssEnabled(false);
+        
+        try {
+        	Class.forName("com.mysql.jdbc.Driver");
+    		String URI="jdbc:mysql://localhost:3306/sp?user=root&password=root&useUnicode=true&characterEncoding=gbk";
+    		Connection con = DriverManager.getConnection(URI);
+    		String sql ="insert into jinmiao(title,url) values(?,?)";
+    		PreparedStatement stmt = con.prepareStatement(sql); 
+    		
+        	HtmlPage page = null;
+        	for(int i=1;i<19;i++){
+        		String url_ = String.format(URL, i);
+        		page = webClient.getPage(url_);
+        		List<DomNode> nodL = page.querySelectorAll(".zjtitle a");
+        		for (DomNode d : nodL) {
+        			String title = d.asText();
+        			String ids = d.getAttributes().item(0).getNodeValue();
+        			ids = ids.substring(4, ids.lastIndexOf("."));
+        			String url = String.format(URL2, ids);
+        			
+        			//入库
+        			stmt.setString(1, title);
+        			stmt.setString(2, url);
+        			stmt.executeUpdate();
+        		}
+        	}
+        	
+        	webClient.close();
+        	
+		} catch (FailingHttpStatusCodeException e) {
+			e.printStackTrace();
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+}
