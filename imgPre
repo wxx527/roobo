@@ -1,0 +1,28 @@
+function preZS(o){
+	var hz = o.value;
+	hz = hz.substring(hz.length-3).toLowerCase();
+	if(hz!='jpg' && hz!='png'){
+		alert('图片格式支持：jpg和png!');
+		return;
+	}
+	$('#zs'+zs).show();
+   	var img = document.getElementById('zs'+zs);
+    var re = new FileReader();
+    re.onload = function(e){img.src = e.target.result;} 
+    $.ajaxFileUpload({//上传文件
+		url : "${base}/attachment/upload",
+		fileElementId : 'zsIMG',
+		dataType : "json",
+		timeout : 1000 * 600,
+		success : function(data, status) {
+			if(data.success) {
+				re.readAsDataURL(o.files[0]);
+				var tempFile = data.message;
+				//$('#iconName').val(tempFile);
+			} else {
+				$.messager.alert('系统提示', '上传失败：' + data.message, "info");
+				return;
+			}
+		}
+	}); 
+}
